@@ -1,56 +1,82 @@
 package google.search.result;
 
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLEncoder;
-import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+//lay xong list keywords, nhug chua tinh so lan xhien
 public class UrlSource {
 
-	final static String prefix = "https://www.google.com/search?q=";
+	//num is the number of GG searched result, "tbm=" means search All, "tbm=vid" means search with only video
+	//"q="+str is to fill keyword here
+	final static String prefix = "https://www.google.com.vn/search?num=10&tbm=&q=";
 
-	public static String getUrlSource(String query) throws IOException{
-		// if query string is keyword, use googleService to get URL content 
-		//if query string is an URL, query normally 
+	public static List<String> getSearchedKeywordsLinks(String query) throws Exception {
 
-		URL url = null;
-		String result = "";
-		int nResult = 0 ;
+		return getWebpageLinks(prefix+URLEncoder.encode(query, "UTF-8"));
+	}
 
-//		if(query.contains("http://") || query.contains("https://"))
-//			url = new URL(query);
-//		else
-			url = new URL(prefix + URLEncoder.encode(query, "UTF-8") + "&num=20");			
-System.out.println("URL = "+url);
-		URLConnection connection = url.openConnection();
+	public static void getKeywords(String url){
+		List<String> result = new ArrayList<String>();
+		String[] keys ;
+		Document doc;
+		String text, reg = "//\\..*/$", temp;
+		List<KeyRate> keysList = new ArrayList<KeyRate>();
+		List<String> list = new ArrayList<String>();
 
-		connection.setConnectTimeout(4000);
-		connection.setReadTimeout(4000);
-		connection.addRequestProperty("User-Agent", "Google Chrome/36");//put the browser name/version
+		try {
+			doc = Jsoup.connect(url).timeout(30000).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.120 Safari/535.2").get();
+			text = doc.text();
 
-		final Scanner reader = new Scanner(connection.getInputStream(), "UTF-8");  //scanning a buffer from object returned by http request
-
-		int i = -1;
-		while(reader.hasNextLine()){  
-			i++;
-
-			String line = reader.nextLine();
-			result += "\n\n"+i+" . "+line;
-
-			if(!line.contains("\"resultStats\">"))//line by line scanning for "resultstats" field because we want to extract number after it
-				continue;
-
-			try{
-				nResult = Integer.parseInt(line.split("\"resultStats\">")[1].split("<")[0].replaceAll("[^\\d]", ""));//finally extract the number convert from string to integer
-			}catch(Exception ex){
-
-			}finally{
-				System.out.println("Number of results = "+ nResult);
+			result = getWebpageLinks(url);
+			for (String s: result){
+				keys = s.split("(http://)|(https://)|(www.)|(.com)|(.org)|[/ . | - | _]");
+				for(String s1 : keys){
+					//System.out.print(s1+", ");
+					if(!list.contains(s1)) list.add(s1);
+				}
 			}
+			for(String s1 : list)
+				System.out.print(s1+", ");
+
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
-		reader.close();
-		return result;
+	}
+
+	public static List<String> getWebpageLinks(String url){
+
+		List<String> links = new ArrayList<String>();
+		Document doc;
+		try {
+			doc = Jsoup.connect(url).timeout(30000).userAgent("Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.120 Safari/535.2").get();
+
+			Elements link = doc.body().select("a[href]");
+			for (Element l : link) {
+
+				String temp = l.attr("href");
+				if ((temp.startsWith("http") || temp.startsWith("com") || temp.startsWith("org")) 
+						&& (!temp.contains("google") && !temp.contains("youtube"))){ 
+					links.add(temp);
+					//System.out.println("" +temp);
+				}
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return links;
+
+	}
+	public static void main (String args[]) throws Exception{
+		getKeywords("http://hibernate.org/orm/what-is-an-orm/");
+		//getSearchedKeywordsLinks("orm");
 	}
 }
