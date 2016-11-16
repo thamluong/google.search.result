@@ -1,59 +1,142 @@
 
 package google.search.result;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Result {
-	public Result() {
+
+
+	public String getResultsGoogleSearch() {
+		//System.out.println("Here is getResultsGoogleSearch");
+
+		String query = "", result = "";
 		try {
-			// TODO code application logic here
-
-			final int Result;
-
 			Scanner s1=new Scanner(System.in);
-			String Str;
-			System.out.println("Enter Query to search: ");//get the query to search
-			Str=s1.next();
-			getResultsCount(Str);
+			System.out.println("Keywords to search: ");//get the query to search
 
-			//System.out.println("Results:"+ Result);
+			query = s1.next();
+			result = UrlSource.getUrlSource(query);
+			//System.out.println("Result = "+result);
+
 		} catch (IOException ex) {
 			Logger.getLogger(Result.class.getName()).log(Level.SEVERE, null, ex);
-		}      
+		}    
+		return result;
 	}
 
-	private static void getResultsCount(final String query) throws IOException {
-		final URL url;
-		url = new URL("https://www.google.com/search?q=" + URLEncoder.encode(query, "UTF-8"));
-		final URLConnection connection = url.openConnection();
+	public String getResultsGoogleSearch(String query) {
+		System.out.println("Here is getResultsGoogleSearch");
 
-		connection.setConnectTimeout(60000);
-		connection.setReadTimeout(60000);
-		connection.addRequestProperty("User-Agent", "Google Chrome/36");//put the browser name/version
+		String result = "";
 
-		final Scanner reader = new Scanner(connection.getInputStream(), "UTF-8");  //scanning a buffer from object returned by http request
+		try {
+			result = UrlSource.getUrlSource(query);
+			if(result.equals("") || result == null ) return "";
+		} catch (IOException e) {
+			//e.printStackTrace();
+			System.out.println("No source");
+		}   
+		return result;
+	}
 
-		int i = -1, result = 0;
-		while(reader.hasNextLine()){   //for each line in buffer
-			i++;System.out.print(i+" . ");
+	public String getResultsUrlSource(String query) {
+		String result = "";
+		try{
 
-			final String line = reader.nextLine();
-			if(i < 10000) System.out.println(i +" = \n\t"+line);
-
-			if(!line.contains("\"resultStats\">"))//line by line scanning for "resultstats" field because we want to extract number after it
-				continue;
-
-			try{        
-				result = Integer.parseInt(line.split("\"resultStats\">")[1].split("<")[0].replaceAll("[^\\d]", ""));//finally extract the number convert from string to integer
-			System.out.println("result = "+ result);
-			}catch(Exception e){
-				System.out.println(e.getMessage());
-			}
+			result = UrlSource.getUrlSource(query);
+			result = UrlSource.getUrlSource("http://"+query);
+			result = UrlSource.getUrlSource("https://"+query);
+		}catch (Exception e){
+			System.out.println(e.getMessage());
 		}
-		reader.close();
+		return result;
+
+	}
+
+	public List<String> getLinks(String str){
+		System.out.println("Here is getLinks");
+
+		int beginIndex = 0, endIndex = 0, lastEndIndex = 0, n = str.length();
+		List<String> links = new ArrayList<String>();
+
+		while(endIndex < n){
+
+			lastEndIndex = endIndex;
+			beginIndex = str.indexOf("href=\"/url?q=", endIndex) + "href=\"/url?q=".length();
+			endIndex = str.indexOf("&amp", beginIndex);
+
+			if(endIndex <= lastEndIndex) break;
+			String s = str.substring(beginIndex, endIndex);
+			if(s.contains("webcache.googleusercontent.com")) continue;
+			//System.out.println("Cite = "+s);
+			links.add(s);
+		}
+
+		return links;
+	}
+
+	public List<String> getLinks2(String str){
+
+		int beginIndex = 0, endIndex = 0, lastEndIndex = 0, n = str.length();
+		List<String> links = new ArrayList<String>();
+
+		while(endIndex < n){
+
+			lastEndIndex = endIndex;
+			beginIndex = str.indexOf("<cite>", endIndex) + "<cite>".length();
+			endIndex = str.indexOf("</cite>", beginIndex);
+
+			if(endIndex <= lastEndIndex) break;
+			String s = str.substring(beginIndex, endIndex);
+			//System.out.println("Cite = "+s);
+			links.add(getStandardLink(s));
+		}
+
+		return links;
+	}
+
+	private String getStandardLink(String str){
+		str = str.replace("<b>", "");
+		str = str.replace("</b>", "");
+		return str;
+
+	}
+
+	public List<String> getSubStringBetweenStrings(String str, String beginStr, String endStr, int beginIndex){
+		//System.out.println("Here is getSubStringBetweenStrings");
+
+		int endIndex = beginIndex, lastEndIndex = 0, n = str.length();
+		List<String> links = new ArrayList<String>();
+
+		while(endIndex < n){
+
+			lastEndIndex = endIndex;
+			beginIndex = str.indexOf(beginStr, endIndex) + beginStr.length();
+			endIndex = str.indexOf(endStr, beginIndex);
+
+			if(endIndex <= lastEndIndex) break;
+			String s = str.substring(beginIndex, endIndex);
+			//if(s.contains("webcache.googleusercontent.com")) continue;
+			//System.out.println("Cite = "+s);
+			links.add(s);
+		}
+
+		return links;		
+	}
+
+	public int countKeys(String str, String key){
+
+		int i = 0, count = 0, length = str.length();
+		while(str.indexOf(key, i) > 0){
+			count++;
+			i += length;
+		}
+		return count;
 	}
 }
